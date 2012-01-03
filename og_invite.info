@@ -1,0 +1,6 @@
+; $Id$
+name = OG Invite
+description = Saves OG invites persistently to use them e.g. in the profile
+dependencies[] = og
+core = 6.x
+package = "Organic groups"

@@ -1,0 +1,73 @@
+<?php
+// $ID$
+
+function og_invite_install() {
+  drupal_install_schema('og_invite');
+}
+
+function og_invite_schema() {
+  $schema['og_invite'] = array(
+    'description' => t('The base table for og invites.'),
+    'fields' => array(
+      'response' => array(
+      'description' => t('Stores the status of the invite (yes/no/none).'),
+      'type' => 'varchar',
+      'length' => 128,
+      'not null' => TRUE,
+      'default' => 'none',
+    ),
+    'email' => array(
+        'description' => t('Stores the e-mail the invite has been addressed to.'),
+        'type' => 'varchar',
+        'length' => 100,
+        'not null' => TRUE,
+        'default' => '',
+      ),
+      'invitee' => array(
+        'description' => t('Stores the user id of the invitee.'),
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'gid' => array(
+        'description' => t('Stores the node id of the invited group.'),
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'inviter' => array(
+        'description' => t('Stores the user id of the inviter.'),
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'pmessage' => array(
+        'description' => t('Stores the message of the invite.'),
+        'type' => 'text',
+        'not null' => FALSE,
+        'default' => NULL,
+      ),
+      'created' => array(
+        'description' => t('Stores the creation time of the invite.'),
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+    ),
+    'primary key' => array('invitee', 'gid'),
+    'indexes' => array(
+      'invitee' => array('invitee'),
+      'gid'   => array('gid'),
+    ),
+  );
+
+  return $schema;
+}
+
+/**
+ * Implementation of hook_uninstall().
+ */
+function og_invite_uninstall() {
+  // Drop database schema.
+  drupal_uninstall_schema('og_invite');
+}

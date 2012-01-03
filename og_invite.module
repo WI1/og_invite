@@ -1,0 +1,113 @@
+<?php
+// $ID$
+
+/**
+ * Implements hook_form_alter
+ * On a submission of an og group invite hook our module for persistence
+ */
+function og_invite_form_og_invite_form_alter(&$form, &$form_state) {
+  $form['#submit'][] = 'og_invite_og_invite_form_submit';
+}
+
+/**
+ * Persistence for invites
+ * Originally og invites are only by email
+ */
+function og_invite_og_invite_form_submit(&$form, &$form_state) {
+  global $user;
+
+  foreach($form_state['valid_emails'] as $email) {
+    $account = user_load(array('mail' => $email));
+
+    $invite = array(
+      'email' => $email,
+      'invitee' => $account->uid,
+      'gid' => $form_state['values']['gid'],
+      'inviter' => $user->uid,
+      'pmessage' => $form_state['values']['pmessage'],
+      'created' => time()
+    );
+
+    drupal_write_record('og_invite', $invite);
+  }
+}
+
+/**
+ * Returns amount of pending invitations for a given user
+ * @param int $uid
+ *   user id, logged in user if null
+ * @return array
+ *   pending invitations, key is gid
+ */
+function og_invite_load_pending($uid = null) {
+  if($uid === null) {
+    global $user;
+    $uid = $user->uid;
+  }
+
+  $invitations = db_query('SELECT * FROM {og_invite} WHERE invitee = %s AND response = "none"', $uid);
+  $rows = array();
+
+  while($inv = db_fetch_object($invitations)) {
+    $rows[$inv->gid][] = $inv;
+  }
+
+  return $rows;
+}
+
+/**
+ * Sets the response of the current user for a given group
+ * @param int $gid
+ *   group id
+ * @param string $response
+ *   with one of the following values: "yes", "no", "none"
+ */
+function og_invite_set_response($gid, $response) {
+  if(!in_array($response, array('none','yes','no')) || !is_numeric($gid)) {
+    drupal_set_message(t('There was an error setting the response of this invite'), 'error');
+    return;
+  }
+
+  global $user;
+
+  if(og_invite_exists($gid, $user->uid)) {
+    $record = array(
+      'response' => $response,
+      'invitee' => $user->uid,
+      'gid' => $gid
+    );
+
+    drupal_write_record('og_invite', $record, array('invitee', 'gid'));
+  }
+}
+
+/**
+ * Checks if an invitation exists for the given group and user
+ * @param int $gid
+ *   group id
+ * @param int uid
+ *   user id
+ * @return boolean
+ */
+function og_invite_exists($gid, $uid = null) {
+  if($uid === null) {
+    global $user;
+    $uid = $user->uid;
+  }
+
+  return (db_result(db_query('SELECT COUNT(*) FROM {og_invite} WHERE gid = %d AND invitee = %s', $gid, $uid)) > 0);
+}
+
+/**
+ * Implements hook_og
+ * Sets it's invite response to 'yes' if user is added or requests membership to a group
+ */
+function og_invite_og($op, $gid, $uid, $args) {
+  switch($op) {
+    case 'user insert':
+    case 'user request':
+    case 'admin new':
+      og_invite_set_response($gid, 'yes');
+    break;
+  }
+}
